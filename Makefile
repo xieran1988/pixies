@@ -1,8 +1,9 @@
-
 # 9.25: http realtime upload monitor
 # 			using http://github.com/valums/file-uploader.git for client
 # 			modifying connections.c in lighttpd to implement monitor
-
+# 9.26: get m3u8 and ts file from youku
+# 9.27: open .ts file demux and mux to .ts file
+#
 lt := /root/xcache/lighttpd-1.4.31
 
 all:
