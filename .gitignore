@@ -1,2 +1,9 @@
 php*
 *.swp
+libav/
+/*.ts
+v.m3u8*
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+install_manifest.txt
