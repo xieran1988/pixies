@@ -1,7 +1,7 @@
 php*
 *.swp
 libav/
-/*.ts
+*.ts
 v.m3u8*
 CMakeCache.txt
 CMakeFiles
