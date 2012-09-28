@@ -4,20 +4,47 @@
 #include <libavutil/avutil.h>
 #include <libavutil/dict.h>
 
-static int decode_int_cb(void *a) {
+typedef struct {
+	AVFormatContext *ifc ;
+	AVFormatContext *ofc;
+	char *name;
+	FILE *fp;
+} node_t ;
+
+node_t n1, n2, n3, n4;
+
+static void _write_packet(node_t *n, uint8_t *buf, int len)
+{
+	fwrite(buf, 1, len, n->fp);
+}
+
+static int write_packet(node_t *n, uint8_t *buf, int len)
+{
+//	printf("write_packet: %s %d\n", n->name, len);
+	int i;
+	fwrite(buf, 1, len, n->fp);
+	for (i = 0; i < len; i += 188) {
+		//_write_packet(n, buf + i, len);
+	}
 	return 0;
 }
 
-int main()
+static int write_packet1(void *_d, uint8_t *buf, int len)
+{
+	return write_packet(&n3, buf, len);
+}
+
+static int write_packet2(void *_d, uint8_t *buf, int len)
+{
+	return write_packet(&n4, buf, len);
+}
+
+void node_init(node_t *n, char *filename)
 {
 	int i, err;
 
-	av_log_set_level(AV_LOG_DEBUG);
-
-	av_register_all();
-
 	AVFormatContext *ifc = NULL;
-	avformat_open_input(&ifc, "../a.ts", NULL, NULL);
+	avformat_open_input(&ifc, filename, NULL, NULL);
 	printf("nb_streams: %d\n", ifc->nb_streams);
 
 	AVStream *ist[2];
@@ -34,7 +61,7 @@ int main()
 //	AVStream *st = ;
 	AVFormatContext *ofc;
 	ofc = avformat_alloc_context();
-	AVOutputFormat *ofmt = av_guess_format(NULL, "a.ts", NULL);
+	AVOutputFormat *ofmt = av_guess_format(NULL, "b.ts", NULL);
 	ofc->oformat = ofmt;
 	strcpy(ofc->filename, "b.ts");
 
@@ -43,9 +70,7 @@ int main()
 	ost[0]->codec->codec_type = ist[0]->codec->codec_type;
 	ost[0]->codec->codec_id = ist[0]->codec->codec_id;
 	avcodec_get_context_defaults3(ost[0]->codec, NULL);
-	AVIOInterruptCB cb = { decode_int_cb, NULL} ;
-	ofc->interrupt_callback = cb;
-	err = avio_open2(&ofc->pb, "b.ts", AVIO_FLAG_WRITE, NULL, NULL);
+	err = avio_open2(&ofc->pb, "/tmp/b.ts", AVIO_FLAG_WRITE, NULL, NULL);
 
 	printf("write header\n");
 	printf("ofc.nb_streams=%d\n", ofc->nb_streams);
@@ -63,18 +88,49 @@ int main()
 
 	avformat_write_header(ofc, NULL);
 
-	printf("read frames\n");
+	n->ifc = ifc;
+	n->ofc = ofc;
+}
+
+void node_read_packet(node_t *n)
+{
+	int i;
+	AVPacket pkt;
+	i = av_read_frame(n->ifc, &pkt);
+	if (i < 0) 
+		return ;
+	if (pkt.stream_index == 0) {
+		if (!strcmp(n->name, "src1"))
+			printf("%s dts=%llu size=%d\n", n->name, pkt.dts, pkt.size);
+		av_write_frame(n->ofc, &pkt);
+	}
+}
+
+int main()
+{
+	av_log_set_level(AV_LOG_DEBUG);
+	av_register_all();
+
+	n1.name = "src1";
+	n2.name = "src2";
+	n3.name = "sink1";
+	n4.name = "sink2";
+
+	node_init(&n1, "/root/1.mp4");
+	node_init(&n2, "/root/2.mp4");
+	n1.ofc->pb->write_packet = write_packet1;
+	n2.ofc->pb->write_packet = write_packet2;
+
+	n3.fp = fopen("3.ts", "wb+");
+	n4.fp = fopen("4.ts", "wb+");
+
+	printf("start read frames\n");
 
 	int n = 0;
-	while (n < 22) {
+	while (n < 140) {
 		n++;
-		AVPacket pkt;
-		i = av_read_frame(ifc, &pkt);
-		if (i < 0) break;
-		if (pkt.stream_index == 0) {
-			printf("#%d dts=%llu size=%d\n", n, pkt.dts, pkt.size);
-			av_write_frame(ofc, &pkt);
-		}
+		node_read_packet(&n1);
+		node_read_packet(&n2);
 	}
 
 	return 0;
