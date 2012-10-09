@@ -7,3 +7,9 @@ CMakeCache.txt
 CMakeFiles
 cmake_install.cmake
 install_manifest.txt
+/jw/
+nginx-1.2.4.tar
+nginx-1.2.4/
+nginx-1.3.7.tar.gz
+nginx-rtmp-module/
+nohup.out

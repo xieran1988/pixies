@@ -1,0 +1,49 @@
+
+
+<script type="text/javascript" src="/jquery.js"></script>
+
+<script type="text/javascript" src="jw/jwplayer.js"></script>
+
+<script >
+
+	function setup(file) {
+		jwplayer("container").setup({
+			'width': '720px',
+			'height': '576px',
+			'controlbar': 'none',
+			'logo.hide': true,
+			events: {
+			},
+			modes: [{
+				type: "flash",
+				src: "jw/player.swf",
+				config: {
+					'viral.onpause': false,
+					'autostart': true,
+					'viral.oncomplete': false,
+					'stretching':'none',
+					//bufferlength: 0,
+					smoothing:false,
+					file: file,
+					streamer: "rtmp://192.168.1.66/myapp",
+					provider: "rtmp",
+				}
+			}]
+		});
+
+	}
+	function change_chan() {
+		setup(3);
+	}
+	$(document).ready(function() {
+		setup(2);
+	});
+</script>
+
+	<button onclick="change_chan()" > change</button>
+<div id="container">
+	Loading the player ...
+</div>
+<script type="text/javascript">
+</script>
+
