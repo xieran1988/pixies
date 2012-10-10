@@ -6,7 +6,7 @@
 # 10.8: can create and live rmtp stream
 # 10.8: 
 # 		DONE: Get preview image from a file. list all I-frame in HTML and let somebody pick one
-# 		TODO: Get preview image from a rtmp stream per n second.
+# 		DONE: Get preview image from a rtmp stream per n second.
 # 		TODO: Make UT382 work in linux
 # 		TODO: Live youtube/youku/vimeo/tudou channel
 # 		TODO: Fix the rtmp BUG: push some frames before first I-frame to client flash player
