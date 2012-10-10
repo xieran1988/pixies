@@ -1,5 +1,5 @@
 project(avin)
 add_executable(avin avin.c)
 find_package(LibAV)
-target_link_libraries (avin ${LIBAV_LIBRARIES} z m pthread bz2)
+target_link_libraries (avin ${LIBAV_LIBRARIES} z m pthread bz2 jpeg)
 cmake_minimum_required(VERSION 2.8)

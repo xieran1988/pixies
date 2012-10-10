@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <libavcodec/avcodec.h>
+//#include <libavcodec/h264.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 #include <libavutil/dict.h>
+#include <jpeglib.h>
 
 typedef struct {
 	AVFormatContext *ifc ;
@@ -106,10 +108,117 @@ void node_read_packet(node_t *n)
 	}
 }
 
+static AVFormatContext *ifc;
+static AVStream *st_h264;
+
+static void init(char *filename) {
+	int i;
+	avformat_open_input(&ifc, filename, NULL, NULL);
+	printf("nb_streams: %d\n", ifc->nb_streams);
+	for (i = 0; i < ifc->nb_streams; i++) {
+		AVStream *st = ifc->streams[i];
+		AVCodec *c = avcodec_find_decoder(st->codec->codec_id);
+		printf("%s\n", c->name);
+		if (!strcmp(c->name, "h264")) 
+			st_h264 = st;
+	}
+}
+
+
+
+void pick_i_frames()
+{
+	AVStream *st = st_h264;
+	int i;
+	printf("nb_index_entries: %d\n", st->nb_index_entries); 
+	for (i = 0; i < st->nb_index_entries; i++) {
+		AVIndexEntry *ie = &st->index_entries[i];
+//		printf("#%d pos=%lld ts=%lld\n", i, ie->pos, ie->timestamp);
+	}
+
+	int64_t ts = st->index_entries[6033].timestamp;
+	printf("ts=%lld\n", ts);
+	i = av_seek_frame(ifc, st->index, ts, 0);
+	printf("seek %d, index=%d\n", i, st->index);
+
+//	i = avio_seek(ifc->pb, st->index_entries[1033].pos, SEEK_SET);
+//	printf("io_seek %d\n", i);
+
+	AVCodec *c = avcodec_find_decoder(st->codec->codec_id);
+	i = avcodec_open2(st->codec, c, NULL);
+	printf("codec_open %d\n", i);
+	st->codec->debug |= FF_DEBUG_PICT_INFO;
+
+	//H264Context *h = st->codec->priv_data;
+	AVFrame *frm = avcodec_alloc_frame();
+	int n = 0;
+	for (n = 0; n < 60; n++) {
+		AVPacket pkt;
+		i = av_read_frame(ifc, &pkt);
+		printf("read %d, pkt: size=%d index=%d\n", 
+				i, pkt.size, pkt.stream_index);
+		if (pkt.stream_index != st->index)
+			continue;
+		int got_pic; 
+		i = avcodec_decode_video2(st->codec, frm, &got_pic, &pkt);
+		printf("decode %d, w=%d h=%d\n", i, frm->width, frm->height);
+		if (got_pic)
+			break;
+	}
+
+	// YUV420P
+	printf("format=%d\n", frm->format);
+	printf("key_frame=%d\n", frm->key_frame);
+	printf("linesize=%d,%d,%d\n", frm->linesize[0], frm->linesize[1], frm->linesize[2]);
+
+	struct jpeg_compress_struct cinfo;
+	struct jpeg_error_mgr jerr;
+	FILE *outfile = fopen("a.jpg", "wb+");
+	cinfo.err = jpeg_std_error(&jerr);
+	jpeg_create_compress(&cinfo);
+	jpeg_stdio_dest(&cinfo, outfile);
+	cinfo.image_width = frm->width; 
+	cinfo.image_height = frm->height;
+	cinfo.input_components = 3;        
+	cinfo.in_color_space = JCS_YCbCr;
+	jpeg_set_defaults(&cinfo);
+	jpeg_set_quality(&cinfo, 90, TRUE);
+	cinfo.raw_data_in = TRUE;
+  cinfo.comp_info[0].h_samp_factor = 2; 
+  cinfo.comp_info[0].v_samp_factor = 2; 
+	cinfo.comp_info[1].h_samp_factor = 1; 
+	cinfo.comp_info[1].v_samp_factor = 1; 
+	cinfo.comp_info[2].h_samp_factor = 1; 
+	cinfo.comp_info[2].v_samp_factor = 1; 
+	printf("dct_size=%d\n", DCTSIZE);
+	jpeg_start_compress(&cinfo, TRUE);
+	int j;
+	JSAMPROW y[16], cb[16], cr[16];
+	JSAMPARRAY data[3];
+	data[0] = y;
+	data[2] = cb;
+	data[1] = cr;
+	for (j = 0; j < cinfo.image_height; j += 16) {
+		for (i = 0; i < 16; i++) {
+			y[i] = frm->data[0] + frm->linesize[0]*(i+j);
+			cr[i/2] = frm->data[1] + frm->linesize[1]*((i+j)/2);
+			cb[i/2] = frm->data[2] + frm->linesize[2]*((i+j)/2);
+		}
+		jpeg_write_raw_data(&cinfo, data, 16);
+	}
+	jpeg_finish_compress(&cinfo);
+	fclose(outfile);
+	jpeg_destroy_compress(&cinfo);
+}
+
 int main()
 {
 	av_log_set_level(AV_LOG_DEBUG);
 	av_register_all();
+
+	init("/root/1.mp4");
+	pick_i_frames();
+	return 0;
 
 	n1.name = "src1";
 	n2.name = "src2";
