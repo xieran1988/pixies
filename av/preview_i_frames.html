@@ -1,0 +1,17 @@
+
+
+<script type="text/javascript" src="/jquery.js"></script>
+<style>
+	body img {
+		width: 200px;
+		margin: 5px;
+	}
+</style>
+<script >
+	$(document).ready(function() {
+		for (i = 1; i <= 17; i++) {
+			$('body').append(['<img src=', i, '.jpg', ' >'].join(''));
+		}
+	});
+</script>
+

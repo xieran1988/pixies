@@ -4,7 +4,8 @@
 # 9.26: get m3u8 and ts file from youku
 # 9.27: open .ts file demux and mux to .ts file
 # 10.8: can create and live rmtp stream
-# 10.8: TODO: Get preview image from a file. list all I-frame in HTML and let somebody pick one
+# 10.8: 
+# 		DONE: Get preview image from a file. list all I-frame in HTML and let somebody pick one
 # 		TODO: Get preview image from a rtmp stream per n second.
 # 		TODO: Make UT382 work in linux
 # 		TODO: Live youtube/youku/vimeo/tudou channel
