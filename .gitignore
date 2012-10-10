@@ -14,3 +14,6 @@ nginx-1.3.7.tar.gz
 nginx-rtmp-module/
 nohup.out
 /yt.*
+/yk.*
+/feedparser*
+/wget-log
