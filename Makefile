@@ -9,6 +9,7 @@
 # 		DONE: Get preview image from a rtmp stream per n second.
 # 		TODO: Make UT382 work in linux
 # 		TODO: Live youtube/youku/vimeo/tudou channel
+# 			DONE: youtube
 # 		TODO: Fix the rtmp BUG: push some frames before first I-frame to client flash player
 # 		TODO: Setup the env: Cairo mix with SDL with libav
 # 		Use libav
@@ -50,4 +51,18 @@ get-first-ts:
 avpipe:
 	$(CC) -o $@ avpipe.c
 
+youtube-rss:
+	curl -s -L -x 192.168.1.66:8888 "http://www.youtube.com/rss/user/ligue1fr/video.rss" > a.rss
+
+youtube-page:
+	curl -s -L -x 192.168.1.66:8888 "http://www.youtube.com/watch?v=`head -1 yt.vid`" > yt.page
+
+parse-youtube-rss:
+	./bf.py ytrss
+
+parse-youtube-page:
+	./bf.py ytpage
+
+wget-youtube-video:
+	curl -L -x 192.168.1.66:8888 "`cat yt.url`" -o yt.mp4 
 
