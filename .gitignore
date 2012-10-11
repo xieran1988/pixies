@@ -16,4 +16,5 @@ nohup.out
 /yt.*
 /yk.*
 /feedparser*
-/wget-log
+/wget-log*
+/pool

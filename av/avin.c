@@ -5,6 +5,9 @@
 #include <libavutil/avutil.h>
 #include <libavutil/dict.h>
 #include <jpeglib.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 typedef struct {
 	AVFormatContext *ifc ;
@@ -110,13 +113,15 @@ void node_read_packet(node_t *n)
 
 static AVFormatContext *ifc;
 static AVStream *st_h264;
-static char *input_filename;
+static char opt_preview;
+static char *input_filename, *output_filename;
+static float preview_pos = 0.4;
 
-static void init(char *filename) {
+static void init() {
 	int i;
-	input_filename = filename;
-	avformat_open_input(&ifc, filename, NULL, NULL);
-	printf("nb_streams: %d\n", ifc->nb_streams);
+	printf("opening %s\n", input_filename);
+	i = avformat_open_input(&ifc, input_filename, NULL, NULL);
+	printf("open %d, nb_streams: %d\n", i, ifc->nb_streams);
 	avformat_find_stream_info(ifc, NULL);
 	for (i = 0; i < ifc->nb_streams; i++) {
 		AVStream *st = ifc->streams[i];
@@ -131,6 +136,7 @@ static void init(char *filename) {
 	printf("codec_open %d\n", i);
 	st_h264->codec->debug |= FF_DEBUG_PICT_INFO;
 }
+
 
 void poll_frame_and_output_jpg(AVFrame *frm, AVStream *st, char *path) {
 	//H264Context *h = st->codec->priv_data;
@@ -157,6 +163,7 @@ void poll_frame_and_output_jpg(AVFrame *frm, AVStream *st, char *path) {
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
 
+	printf("write to %s\n", path);
 	FILE *outfile = fopen(path, "wb+");
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_compress(&cinfo);
@@ -210,7 +217,7 @@ void pick_i_frames_rtmp()
 void pick_i_frames()
 {
 	AVStream *st = st_h264;
-	int i;
+	int i, r;
 
 	AVFrame *frm = avcodec_alloc_frame();
 
@@ -218,6 +225,15 @@ void pick_i_frames()
 	for (i = 0; i < st->nb_index_entries; i++) {
 		AVIndexEntry *ie = &st->index_entries[i];
 //		printf("#%d pos=%lld ts=%lld\n", i, ie->pos, ie->timestamp);
+	}
+
+	if (opt_preview) {
+		i = (int)(st->nb_index_entries * preview_pos);
+		printf("preview_pos %d/%d\n", i, st->nb_index_entries);
+		r = av_seek_frame(ifc, st->index, st->index_entries[i].timestamp, 0);
+		printf("seek %d, index=%d\n", r, st->index);
+		poll_frame_and_output_jpg(frm, st, output_filename);
+		return ;
 	}
 
 	int nr = st->nb_index_entries;
@@ -242,13 +258,29 @@ void pick_i_frames()
 	}
 }
 
-int main()
+static void help() {
+
+	exit(0);
+}
+
+int main(int argc, char *argv[])
 {
 	av_log_set_level(AV_LOG_DEBUG);
 	av_register_all();
+	int c;
+	int i;
+	char *filename = NULL;
 
-	init("rtmp://192.168.1.66/myapp/1");
-	pick_i_frames_rtmp();
+	if (!strcmp(argv[1], "-p")) {
+		opt_preview = 1;
+		input_filename = argv[2];
+		output_filename = argv[3];
+		printf("preview %s %s\n", input_filename, output_filename);
+		init();
+		pick_i_frames();
+	} else 
+		help();
+
 	//init("/root/2.mp4");
 //	pick_i_frames();
 	return 0;

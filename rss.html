@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title> RSS Videos </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <link href="../assets/css/bootstrap.css" rel="stylesheet">
+    <link rel="shortcut icon" href="../assets/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png">
+
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+      .sidebar-nav {
+        padding: 9px 0;
+      }
+			.index-span4 {
+				padding-bottom: 30px;
+
+			}
+			.ctrl-sublist {
+				margin-bottom: 5px;
+			}
+			.ctrl-sublist button {
+				margin-left: 5px;
+			}
+			.form-errmsg {
+				color: red;
+			}
+			.radio-tab {
+				display: none;
+			}
+			.controls img {
+				margin-bottom: 20px;
+				height: 150px;
+			}
+    </style>
+    <link href="rss.css" rel="stylesheet">
+    <link href="../assets/css/bootstrap-responsive.css" rel="stylesheet">
+
+		<script id=index_substr type='text/html'> 
+			<h2>字符串替换</h2>
+			<img src=substr.png></img>
+			<p> 替换页面中的出现的特定字符串 </p>
+		</script>
+
+		<script src=/jquery.js> </script>
+		<script src=/temp.js> </script>
+		<script src=rss.js> </script>
+
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container-fluid">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="?index">管理视频</a>
+          <div class="nav-collapse">
+            <ul id=topnav class="nav">
+              <li><a href="?index">视频</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+
+		<script id=man_tr type='text/html'>
+			<tr id=<%= r.id %> cat=<%= r.cat %> >
+				<td><%= r.alias %></td>
+				<td><%= r.host %></td>
+				<td>
+					<button class="btn btn-primary btn-mini edit" 
+						onclick="man_tr_edit_click(event);" > 编辑 </button>
+					<button class="btn btn-danger btn-mini del" 
+						onclick="man_tr_del_click(event);" > 删除 </button>
+				</td>
+			</tr>
+		</script>
+
+		<script id=man_html type='text/html'>
+			<div class="row-fluid">
+				<div class="span3">
+					<div class="well sidebar-nav">
+						<ul id=host_list class="nav nav-list">
+							<li class="nav-header">策略列表</li>
+							<%= li %>
+						</ul>
+					</div>
+				</div><!--/span-->
+				<div id=ads_list_span class="span5">
+					<h2> 应用中的主机 </h2>
+					<a href='?'><button style="" class="btn btn-primary" >添加策略 </button></a>
+					<br>
+					<br>
+					<table id="main_table" class="table table-condensed" >
+						<%= tr %>
+					</table>
+        </div><!--/span-->
+			</div>
+		</script>
+
+		<script id=edit_add_btn type='text/html'>
+			<button 
+				onclick="edit_add_btn_click(event);" 
+				class="btn btn-primary btn-mini " 
+				tid="<%= tid %>" > 添加 </button>
+		</script>	
+
+
+		<script id=edit_del_btn type='text/html'>
+			<% if (del > 0) { %>
+				<button 
+					onclick="edit_del_btn_click(event);" 
+					class="btn btn-danger btn-mini" > 删除 </button>
+			<% } %>
+		</script>	
+
+		<script id=edit_input type='text/html'>
+			<div class="control-group">
+				<label class="control-label"><%= title %></label>
+				<div class="controls ctrl-sublist">
+					<input field_in='<%= name %>' class="input" type="text" 
+						value="<%= getval(name) %>" ></input>
+					<span class="help-inline form-errmsg" ></span>
+					<p class="help-block"><%= help %> </p>
+				</div>
+			</div>
+		</script>
+
+		<script id=edit_radio_tab type='text/html'>
+			<div class="control-group">
+				<label class="control-label" ><%= title %></label>
+				<div class="controls ">
+					<% sel = getval(name); %>
+					<% if (!sel) { sel = 1; } %>
+					<% for (i = 0; i < list.length; i++) { %>
+						<label class="radio inline" >
+							<% checked = ((i+1) == sel) ? 'checked=""' : ''; %>
+							<input type="radio" name="<%= name %>" 
+								onclick="edit_radio_tab_click(event);" 
+								value="<%= i+1 %>" 
+								<%= checked %> >
+							<%= list[i] %>
+						</label>
+					<% } %>
+				</div>
+			</div>
+			<div id='tabs_<%= name %>'>
+				<%= include(name + sel) %>
+			</div>
+		</script>
+
+		<script id=edit_textarea type='text/html'>
+			<div class="control-group">
+				<label class="control-label" > <%= title %> </label>
+				<div class="controls">
+					<textarea field_in="<%= name %>" rows=5 ><%= getval(name) %></textarea>
+				<span class="help-inline form-errmsg" ></span>
+				</div>
+			</div>
+		</script>
+
+		<script id=ads_content_tab2 type='text/html'>
+			<%= include('edit_textarea', {name:'ads_html', title:'自定义 HTML'}) %>
+		</script>
+
+		<script id=ads_content_tab1 type='text/html'>
+			<div class="control-group">
+				<label class="control-label" for="fileInput">上传图片</label>
+				<div class="controls">
+					<% src = getval('upload_img_path'); %>
+					<% style = src ? '' : 'display:none' %>
+					<div id='upload-img' style='<%= style %>'>
+						<img id='upload-img' src='<%= src %> '>
+					</div>
+					<input type="hidden" field_in='upload_img_path' value=<%= src %>> </input>
+					<span class="help-inline " ></span>
+					<input id='upload-file' class="input-file" type="file" onchange="upload_onchange(event);">
+					<div id='upload-img-bar' 
+						class="progress progress-striped " style='width: 200px; display:none ' >
+						<div class="bar" style="width: 10%;"></div>
+					</div>
+					<span id='upload-msg' class="help-inline " ></span>
+					<span class="help-inline form-errmsg" ></span>
+				</div>
+			</div>
+			<%= include('edit_input', {name:'ads_link', title:'图片链接'}) %>
+		</script>
+
+		<script id=edit_ads_content type='text/html'> 
+			<%= include('edit_radio_tab', {
+				name:'ads_content_tab', 
+				title:'广告内容', 
+				list:[ '单张图片', '自定义HTML' ],
+				}) %>
+		</script>
+
+		<script id=taobao_keyword type='text/html'>
+			<%= include('edit_input', {
+				name:'keywords',
+				title:'关键字列表', 
+				help:'当宝贝名称中包含关键字的时候，您的广告将被显示出来。关键字以空格为分隔符'}) %>
+		</script>
+
+		<script id=taobao_tab1 type='text/html'>
+			<div class="controls "> <img src="taobao1.png"></img> </div>
+			<%= include('edit_ads_content') %>
+		</script>	
+
+		<script id=taobao_tab2 type='text/html'>
+			<div class="controls "> <img src="taobao2.png"></img> </div>
+			<%= include('edit_ads_content') %>
+			<%= include('taobao_keyword') %>
+		</script>	
+
+		<script id=taobao_tab3 type='text/html'>
+			<div class="controls"> <img src="taobao3.png"></img> </div>
+			<%= include('edit_ads_content') %>
+			<%= include('taobao_keyword') %>
+		</script>
+
+		<script id=job51_tab1 type='text/html'>
+			<div class="controls"> <img src="job511.png"></img> </div>
+			<%= include('edit_ads_content') %>
+		</script>
+
+		<script id=edit_job51 type='text/html'>
+			<%= include('edit_radio_tab', {
+				name:	'job51_tab', 
+				title:'插入位置', 
+				list:	[ '主页上方' ],
+				sel: sel
+			}) %>
+		</script>
+
+
+		<script id=zol_tab1 type='text/html'>
+			<div class="controls"> <img src="zol1.png"></img> </div>
+			<%= include('edit_ads_content') %>
+		</script>
+
+		<script id=edit_zol type='text/html'>
+			<%= include('edit_radio_tab', {
+				name:	'zol_tab', 
+				title:'插入位置', 
+				list:	[ '主页上方' ],
+				sel: sel
+			}) %>
+		</script>
+
+		<script id=sohu_tab1 type='text/html'>
+			<div class="controls"> <img src="sohu1.png"></img> </div>
+			<%= include('edit_ads_content') %>
+		</script>
+
+		<script id=edit_sohu type='text/html'>
+			<%= include('edit_radio_tab', {
+				name:	'sohu_tab', 
+				title:'插入位置', 
+				list:	[ '主页上方' ],
+				sel: sel
+			}) %>
+		</script>
+
+		<script id=edit_taobao type='text/html'>
+			<%= include('edit_radio_tab', {
+				name:	'taobao_tab', 
+				title:'插入位置', 
+				list:	[ '主页中央', '宝贝页面左侧', '宝贝说明' ],
+				sel: sel
+			}) %>
+		</script>
+
+		<script id=edit_keyword type='text/html'>
+			<% help = (mode == '百度') ? 
+				'用户搜索关键字的时候，您的广告将被显示出来' : 
+				'宝贝名字中包含关键字的时候，您的广告将被显示出来';
+				%>
+			<%= include('edit_input', {
+				name: 'keywords',
+				title:'关键字列表',
+				help: help + '<br>关键字请用空格分隔'
+				}) %>
+		</script>
+
+		<script id=baidu_tab1 type='text/html'>
+			<div class="controls "> <img src="baidu1.png"></img> </div>
+			<%= include('edit_input', {name:'ads_name', title:'广告名称'}) %>
+			<%= include('edit_input', {name:'ads_link', title:'广告链接'}) %>
+		</script>	
+
+		<script id=baidu_tab2 type='text/html'>
+			<div class="controls "> <img src="baidu2.png"></img> </div>
+			<%= include('edit_keyword', {mode:'baidu'}) %>
+			<%= include('edit_input', {name:'ads_name', title:'广告名称'}) %>
+			<%= include('edit_input', {name:'ads_link', title:'广告链接'}) %>
+			<%= include('edit_textarea', {name:'ads_html', title:'广告描述'}) %>
+		</script>	
+
+		<script id=baidu_tab3 type='text/html'>
+			<div class="controls"> <img src="baidu3.png"></img> </div>
+			<%= include('edit_keyword', {mode:'baidu'}) %>
+			<%= include('edit_input', {name:'ads_name', title:'广告名称'}) %>
+			<%= include('edit_input', {name:'ads_link', title:'广告链接'}) %>
+			<%= include('edit_textarea', {name:'ads_html', title:'广告描述'}) %>
+		</script>
+
+		<script id=edit_baidu type='text/html'>
+			<%= include('edit_radio_tab', {
+				name:'baidu_tab', 
+				title:'插入位置', 
+				list:[ '主页下方热门搜索链接', '搜索结果第一位', '百度推广右侧' ],
+				}) %>
+		</script>
+
+		<script id=substr_addr type='text/html' >
+			<div class="controls ctrl-sublist">
+				<input field_in_n='substr_addr' class="input" type="text" value="<%= v %>"></input>
+				<%=	include('edit_del_btn') %>
+				<span class="help-inline form-errmsg" ></span>
+			</div>
+		</script>
+
+		<script id=substr_sub type='text/html' >
+			<div class="controls ctrl-sublist">
+				<span>将</span>
+				<input field_in_2='substr_sub_a' class="input-mini " type="text" value="<%= v[0] %>"></input>
+				<span>替换为</span>
+				<input field_in_2='substr_sub_b' class="input-mini " type="text" value="<%= v[1] %>"></input>
+				<%= include('edit_del_btn') %>
+				<span class="help-inline form-errmsg" ></span>
+			</div>
+		</script>
+
+		<script id=edit_subip type='text/html'>
+
+			<div class="control-group" >
+				<label class="control-label" >匹配 IP 地址列表</label>
+					<%= addr %> 
+				<div class="controls ">
+					<%= include('edit_add_btn', {tid:'substr_addr'}) %>
+				</div>
+				<div class="controls ">
+					<p class="help-block">请指定需要替换的 IP 地址，可以使用星号匹配，比如说：
+					<code>192.168.1.*</code>可以匹配
+					<code>192.168.1.3</code>和<code>192.168.1.11</code>
+					</p>
+				</div>
+			</div>
+
+			<%= include('edit_input', {name:'subip', title:'将 IP 替换为', v:r.subip}) %>
+
+			<%= include('edit_input', {name:'subsrc', title:'将来源替换为', v:r.subsrc}) %>
+
+		</script>
+
+		<script id=edit_substr type='text/html'>
+
+			<div class="control-group" >
+				<label class="control-label" >匹配网址列表</label>
+					<%= addr %> 
+				<div class="controls ">
+					<%= include('edit_add_btn', {tid:'substr_addr'}) %>
+				</div>
+				<div class="controls ">
+					<p class="help-block">请指定在哪些网页中需要替换字符串，比如说：</p>
+					<p class="help-block">
+					<code>*.baidu.com</code>可以匹配
+					<code>www.baidu.com</code>和<code>img.baidu.com</code>
+					</p>
+				</div>
+			</div>
+
+			<div class="control-group">
+				<label class="control-label">替换列表</label>
+				<div> <%= sub %> </div>
+				<div class="controls ctrl-sublist">
+					<%= include('edit_add_btn', {tid:'substr_sub'}) %>
+				</div>
+			</div>
+
+		</script>
+
+		<script id=edit_html type='text/html'>
+			<div class="row-fluid">
+				<div class="span3">
+					<%= left %>
+				</div><!--/span-->
+				<div class="span6">
+					<%= form %>
+				</div>
+			</div>
+		</script>
+
+		<script id=edit_form type='text/html'>
+			<h2><%= h2 %></h2>
+			<form class="form-horizontal" >
+				<fieldset>
+					<legend>请填写相关策略选项</legend>
+					<%= html %>
+
+					<div class="form-actions">
+						<button onclick="edit_form_ok(event);" 
+							type="submit" class="btn btn-primary">保存更改</button>
+						<button class="btn" onclick="edit_form_preview(event);" >预览</button>
+						<button class="btn" onclick="history.back();" >取消</button>
+						<span id='form_btn_tips' class="help-inline"> </span>
+					</div>
+				</fieldset>
+			</form>
+		</script>
+
+		<script id=edit_form_header type='text/html'>
+
+			<%= include('edit_input', {
+				name:'alias', title:'备注名称', 
+				help:'您自定义的备注名称，将显示在管理列表中，方便您管理',
+				v:r.alias,
+			}) %>
+
+			<div class="control-group">
+				<label class="control-label" >添加到主机</label>
+				<div class="controls">
+					<select field_in='host'  >
+						<%= hosts %>
+					</select>
+					<span class="help-inline form-errmsg" ></span>
+				</div>
+			</div>
+		</script>
+
+		<script id=index_html type='text/html' > 
+			<div class="row-fluid" style='margin:0 auto; '>
+				<div class="span9">
+					<div class="hero-unit">
+						<h2>请选择要应用的 Web 策略</h2>
+						<p>本系统提供了多种配置的 Web 策略，可以灵活的应用在您的不同主机上</p>
+					</div>
+					<%= html %>
+				</div>
+			</div>
+		</script>
+
+		<script id=index_baidu type='text/html'> 
+			<h2>百度广告 </h2>
+			<img src=baidu.gif></img>
+			<p> 在百度的页面插入您定制的广告：主页下方热门搜索链接，搜索结果第一位，百度推广右侧 </p>
+		</script>
+
+		<script id=index_sohu type='text/html'> 
+			<h2>搜狐广告</h2>
+			<img src=sohu.jpg></img>
+			<p> 在搜狐的页面插入您定制的广告：首页上方巨幅广告、下方悬浮窗广告
+		</script>
+
+		<script id=index_subip type='text/html'> 
+			<h2>IP 地址替换</h2>
+			<img src=ip138.png></img>
+			<p> 在 ip138/ip168 页面中的 IP 地址和所在地更改为您定制的内容
+		</script>
+
+		<script id=index_zol type='text/html'> 
+			<h2>中关村在线广告</h2>
+			<img src=zol.png></img>
+			<p> 在中关村在线的页面中插入您定制的广告：首页上方长条形广告、首页中间巨幅悬浮窗广告
+		</script>
+
+		<script id=index_taobao type='text/html'> 
+			<h2>淘宝广告</h2>
+			<img src=taobao.jpg></img>
+			<p> 在淘宝的页面中插入您定制的广告：首页中央长条形广告、宝贝页面左侧广告
+		</script>
+
+		<script id=index_job51 type='text/html'> 
+			<h2>51job 广告</h2>
+			<img src=job51.jpg></img>
+			<p> 在51job的页面中插入您定制的广告：首页上方长条形广告、首页中间巨幅悬浮窗广告
+		</script>
+
+		<script id=thumb_span type='text/html'>
+			<li class="span2">
+			<a href="#" class="thumbnail">
+				<img src="<%= r.img %>" alt="">
+			</a>
+			<%= r.title %>
+			</li>
+		</script>
+
+		<script id=index_videos type='text/html'>
+			<ul class="thumbnails">
+				<%= html %>
+			</ul>
+		</script>
+
+    <div id=main_div class="container-fluid" >
+
+    </div><!--/.fluid-container-->
+      <hr>
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="../assets/js/bootstrap-transition.js"></script>
+    <script src="../assets/js/bootstrap-alert.js"></script>
+    <script src="../assets/js/bootstrap-modal.js"></script>
+    <script src="../assets/js/bootstrap-dropdown.js"></script>
+    <script src="../assets/js/bootstrap-scrollspy.js"></script>
+    <script src="../assets/js/bootstrap-tab.js"></script>
+    <script src="../assets/js/bootstrap-tooltip.js"></script>
+    <script src="../assets/js/bootstrap-popover.js"></script>
+    <script src="../assets/js/bootstrap-button.js"></script>
+    <script src="../assets/js/bootstrap-collapse.js"></script>
+    <script src="../assets/js/bootstrap-carousel.js"></script>
+    <script src="../assets/js/bootstrap-typeahead.js"></script>
+
+  </body>
+</html>
