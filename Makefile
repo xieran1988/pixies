@@ -12,6 +12,9 @@
 # 		DONE: RSS parsing, using lib http://code.google.com/p/feedparser/downloads/detail?name=feedparser-5.1.2.tar.bz2&can=2&q=
 # 		DONE: fetch RSS feed from youtube, youku
 #
+# 10.11:
+# 		TODO: get preview images
+#
 # 		TODO: Make UT382 work in linux
 # 		TODO: Live youtube/youku/vimeo/tudou channel
 # 			DONE: youtube

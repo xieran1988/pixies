@@ -41,18 +41,24 @@ def S(sha, r):
 import glob
 
 def LS():
-	h = {}
+	items = {}
+	rss = {}
 	for i in glob.glob('pool/*.m'):
 		sha = re.findall(r'/(\w+).m', i)[0]
-		r = L(sha)
-		r['img'] = i[:-2] + '.jpg'
-		h[sha] = r
-	return h
+		m = L(sha)
+		m['img'] = i[:-2] + '.jpg'
+		if not os.path.exists(m['img']):
+			del m['img']
+		items[sha] = m
+		if m['rss'] not in rss:
+			rss[m['rss']] = []
+		rss[m['rss']].append(sha)
+	return [items, rss, marshal.load(open('rssinfo.m'))]
 
-def fetch_video_start(sha, rss, fname, title):
+def fetch_video_start(sha, rssurl, fname, title):
 	if os.path.exists(fname):
 		return False
-	S(sha, {'title':title, 'rss':rss, 'fname':fname, 'stat':'start'})
+	S(sha, {'title':title, 'rss':shortsha(rssurl), 'fname':fname, 'stat':'start'})
 	return True
 
 def fetch_video_end(sha):
@@ -108,12 +114,12 @@ def parse_youtube_page(url):
 	title = meta_og_title(s)
 	return r['34'], title
 
-def grab_m3u8_ts(url, vid, title):
+def grab_m3u8_ts(rssurl, url, vid, title):
 	ts = filter(lambda x: x.startswith('http'), curl(url).split('\n'))
 	print 'n_ts', len(ts)
 	sha = shortsha(vid)
 	fname = 'pool/%s.ts' % sha
-	if fetch_video_start(sha, url, fname, title):
+	if fetch_video_start(sha, rssurl, fname, title):
 		os.system(' > %s' % fname)
 		for i in ts:
 			if os.system('wget "%s" -O - >> %s' % (i, fname)) != 0:
@@ -125,6 +131,8 @@ def parse_youku_rss(url):
 #	print d.entries[0].link
 #	soup = BeautifulSoup(open('youku.rss').read())
 	s = fetch(url)
+	d = feedparser.parse(s)
+	update_rss_info(url, d)
 	r = re.findall(r'id_([^_]+)', s)
 	h = {}
 	for i in r:
@@ -136,7 +144,7 @@ def parse_youku_rss(url):
 #		print 'saving', vid
 		now = int(time.time())
 		mu = 'http://v.youku.com/player/getM3U8/vid/%s/type/%s/ts/%d/v.m3u8' % (vid, 'flv', now)
-		grab_m3u8_ts(mu, vid, title)
+		grab_m3u8_ts(url, mu, vid, title)
 
 def parse_youku_page(url):
 	#var videoId = '114934455';
@@ -185,10 +193,24 @@ def fetch_vimeo_video(url, vid):
 
 def parse_vimeo_rss(url):
 	s = fetch(url)
+	open('vo.rss', 'w+').write(s)
 	d = feedparser.parse(s)
+	update_rss_info(url, d)
 	for l in [re.findall('(\d+)$', e.link)[0] for e in d.entries]:
 		print 'saving', l
 		fetch_vimeo_video(url, l)
+
+def update_rss_info(url, d):
+	if not os.path.exists('rssinfo.m'):
+		m = {}
+	else:
+		m = marshal.load(open('rssinfo.m'))
+	if url in m:
+		return 
+	sha = shortsha(url)
+	print 'update rss info', url, sha
+	m[sha] = {'title':d.feed.title}
+	marshal.dump(m, open('rssinfo.m', 'wb+'))
 
 def call_cgi(args):
 	if args[0] == 'ls':
@@ -197,6 +219,12 @@ def call_cgi(args):
 if __name__ == '__main__':
 
 	url = sys.argv[1]
+
+	if url == 'genallpreview':
+		r = LS()
+		for k in r:
+			v = r[k]
+			os.system('av/avin -p %s %s' % (v['fname'], v['img']))
 
 	if url == 'vimeo':
 		fetch_vimeo_video('cmdline', sys.argv[2])

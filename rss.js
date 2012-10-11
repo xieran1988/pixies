@@ -348,15 +348,36 @@ function nav_active(n) {
 }
 
 function show_index_videos() {
-	$.post('cgi.py?ls', {}, function(d) {
-		console.log(d);
-		var r = jQuery.parseJSON(d);
-		var html = '';
-		for (var k in r) {
-			console.log(k);
-			html += template('thumb_span', {r:r[k]});
+	$.post('rsscgi.py?ls', {}, function(d) {
+		var ra = jQuery.parseJSON(d);
+		var items = ra[0];
+		var rss = ra[1];
+		var rssinfo = ra[2];
+		var sel;
+		if (qa[0] == 'sel') {
+			sel = qa[1];
 		}
-		$('#main_div').html(template('index_videos', {html:html}));
+		console.log(ra);
+		var li = '';
+	 	li += '<li class="nav-header">RSS</li>';
+		for (var k in rss) {
+			if (!sel) {
+				sel = k;
+			}
+			li += '<li rsssha="' + k + '"><a href=?sel,' + k + '>' + rssinfo[k].title + '</a></li>';
+		}
+		$('#main_div').html(template('index_videos', {li:li}));
+		console.log($('li[rsssha=' + sel + ']'));
+		$('li[rsssha=' + sel + ']').addClass('active');
+		console.log(sel);
+		var html = '';
+		for (var k in items) {
+			if (items[k].rss == sel) {
+				console.log(items[k].rss);
+				html += template('thumb_span', {r:items[k]});
+			}
+		}
+		$('.thumbnails').html(html);
 	});
 }
 

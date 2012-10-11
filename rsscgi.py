@@ -11,5 +11,5 @@ import rss
 #print 'Content-type: text/json'
 #print
 r = rss.call_cgi(os.environ['QUERY_STRING'].split(','))
-print 'aaa'
+print json.dumps(r)
 

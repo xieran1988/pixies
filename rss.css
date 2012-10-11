@@ -1,3 +1,6 @@
-.thumbnails {
-	text-align: center;
+.thumbnail img {
+	width: 140px;
+}
+.thumbnail-a {
+	width: 140px ;
 }
