@@ -18,3 +18,6 @@ nohup.out
 /feedparser*
 /wget-log*
 /pool
+/*.pyc
+/*.m
+/*.rss
