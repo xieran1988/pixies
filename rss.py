@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# coding: utf-8
+
 from bs4 import BeautifulSoup
 import subprocess, sys, json, argparse, re, os
 import urllib, time, hashlib
@@ -49,6 +51,14 @@ def LS():
 		m['img'] = i[:-2] + '.jpg'
 		if not os.path.exists(m['img']):
 			del m['img']
+		if os.path.exists(i[:-2] + '.len'):
+			totlen = int(open(i[:-2] + '.len').read())
+			curlen = os.path.getsize(m['fname'])
+			m['curlen'] = curlen
+			m['totlen'] = totlen
+			if totlen != curlen:
+				m['stat'] = 'downloading'
+				m['alt'] = 'Downloading %.2f%%' % (curlen*100./totlen)
 		items[sha] = m
 		if m['rss'] not in rss:
 			rss[m['rss']] = []
@@ -57,6 +67,7 @@ def LS():
 
 def fetch_video_start(sha, rssurl, fname, title):
 	if os.path.exists(fname):
+		print 'exists, skip'
 		return False
 	S(sha, {'title':title, 'rss':shortsha(rssurl), 'fname':fname, 'stat':'start'})
 	return True
@@ -176,8 +187,10 @@ def fetch_vimeo_video(url, vid):
 	fname = 'pool/%s.mp4' % sha
 	title = vimeo_video_title(vimeo_page_url(vid))
 	if fetch_video_start(sha, url, fname, title):
+		os.system('wget 106.187.99.71:8080/getlen.pl?%s -O pool/%s.len' % (vid, sha))
 		os.system('wget 106.187.99.71:8080/getvideo.pl?%s -O %s' % (vid, fname))
 		fetch_video_end(sha)
+
 	'''
 	url = vimeo_page_url(vid)
 	print url

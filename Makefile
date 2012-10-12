@@ -13,9 +13,8 @@
 # 		DONE: fetch RSS feed from youtube, youku
 #
 # 10.11:
-# 		TODO: get preview images
+# 		DONE: get preview images for each rss channel
 #
-# 		TODO: Make UT382 work in linux
 # 		TODO: Live youtube/youku/vimeo/tudou channel
 # 			DONE: youtube
 #
@@ -27,6 +26,7 @@
 # 		TODO: Fix the rtmp BUG: push some frames before first I-frame to client flash player
 # 		TODO: Fix the rtmp BUG: push some frames before first I-frame to client flash player
 # 		TODO: Setup the env: Cairo mix with SDL with libav
+# 		TODO: Make UT382 work in linux
 # 		Use libav
 
 lt := /root/xcache/lighttpd-1.4.31
