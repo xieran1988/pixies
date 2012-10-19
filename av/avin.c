@@ -79,7 +79,7 @@ static void output_init()
 	codec[0]->width = 720;
 	codec[0]->height = 360;
 	codec[0]->codec_tag = av_codec_get_tag(ofmt->codec_tag, AV_CODEC_ID_H264);
-	printf("ofc->codec ok\n");
+	printf("ofc->codec codec[0]=%p ofc->st[0]->codec=%p\n", codec[0], ofc->streams[0]->codec);
 	printf("codec[0].tag=%d\n", codec[0]->codec_tag);
 
 	err = avio_open2(&ofc->pb, output_filename, AVIO_FLAG_WRITE, NULL, NULL);
@@ -93,7 +93,6 @@ static void output_init()
 	printf("ofc.oformat.write_header=%p\n", ofc->oformat->write_header);
 	printf("ofc.oformat.name=%s\n", ofc->oformat->name);
 	printf("ofc.pb=%p\n", ofc->pb);
-	ofc->streams[0]->codec->time_base.num = 10;
 	printf("ofc.st[0].avg_frame_rate={%d,%d}\n", 
 			ofc->streams[0]->avg_frame_rate.num,
 			ofc->streams[0]->avg_frame_rate.den
@@ -134,6 +133,8 @@ static void init() {
 		AVStream *st = ifc->streams[i];
 		AVCodec *c = avcodec_find_decoder(st->codec->codec_id);
 		printf("st=%p cid=%d c=%p\n", st, st->codec->codec_id, c);
+		printf("timebase={%d,%d}\n", 
+				st->codec->time_base.num, st->codec->time_base.den);
 		printf("%s\n", c->name);
 		if (!strcmp(c->name, "h264")) 
 			st_h264 = st;
@@ -333,7 +334,7 @@ static void encode()
 			printf("write frame\n");
 			AVPacket pkt;
 			pkt.stream_index = 0;
-			pkt.pts = frm->pkt_pts;
+			pkt.pts = frm->pkt_pts / 20;
 			pkt.dts = pkt.pts;
 			pkt.data = nal[0].p_payload;
 			pkt.size = r;
