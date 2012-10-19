@@ -21,3 +21,5 @@ nohup.out
 /*.pyc
 /*.m
 /*.rss
+/logs
+/x264

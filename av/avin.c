@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <x264.h>
 
 typedef struct {
 	AVFormatContext *ifc ;
@@ -44,38 +45,45 @@ static int write_packet2(void *_d, uint8_t *buf, int len)
 	return write_packet(&n4, buf, len);
 }
 
-void node_init(node_t *n, char *filename)
+static AVFormatContext *ifc;
+static AVStream *st_h264;
+static char opt_preview;
+static char *input_filename, *output_filename;
+static float preview_pos = 0.4;
+static AVFormatContext *ofc;
+
+static void output_init()
 {
 	int i, err;
 
-	AVFormatContext *ifc = NULL;
-	avformat_open_input(&ifc, filename, NULL, NULL);
-	printf("nb_streams: %d\n", ifc->nb_streams);
-
-	AVStream *ist[2];
-	ist[0] = ifc->streams[0];
-	ist[1] = ifc->streams[1];
-	for (i = 0; i < ifc->nb_streams; i++) {
-		AVStream *st = ifc->streams[i];
-		AVCodec *c = avcodec_find_decoder(st->codec->codec_id);
-		printf("%s\n", c->name);
-	}
-
 	AVCodec *c[2];
+	char *guess_fp = "a.flv";
 
 //	AVStream *st = ;
-	AVFormatContext *ofc;
 	ofc = avformat_alloc_context();
-	AVOutputFormat *ofmt = av_guess_format(NULL, "b.ts", NULL);
+	AVOutputFormat *ofmt = av_guess_format(NULL, guess_fp, NULL);
 	ofc->oformat = ofmt;
-	strcpy(ofc->filename, "b.ts");
+	strcpy(ofc->filename, guess_fp);
+	printf("ofc ok\n");
 
 	AVStream *ost[2];
 	ost[0] = avformat_new_stream(ofc, NULL);
-	ost[0]->codec->codec_type = ist[0]->codec->codec_type;
-	ost[0]->codec->codec_id = ist[0]->codec->codec_id;
-	avcodec_get_context_defaults3(ost[0]->codec, NULL);
-	err = avio_open2(&ofc->pb, "/tmp/b.ts", AVIO_FLAG_WRITE, NULL, NULL);
+	//ost[0]->codec->codec_id = ist[0]->codec->codec_id;
+	AVCodecContext *codec[2];
+	codec[0] = ost[0]->codec;
+	avcodec_get_context_defaults3(codec[0], NULL);
+	codec[0]->codec_id = AV_CODEC_ID_H264;
+	codec[0]->codec_type = AVMEDIA_TYPE_VIDEO;
+	codec[0]->time_base.num = 1;
+	codec[0]->time_base.den = 25;
+	codec[0]->width = 720;
+	codec[0]->height = 360;
+	codec[0]->codec_tag = av_codec_get_tag(ofmt->codec_tag, AV_CODEC_ID_H264);
+	printf("ofc->codec ok\n");
+	printf("codec[0].tag=%d\n", codec[0]->codec_tag);
+
+	err = avio_open2(&ofc->pb, output_filename, AVIO_FLAG_WRITE, NULL, NULL);
+	printf("open2=%d\n", err);
 
 	printf("write header\n");
 	printf("ofc.nb_streams=%d\n", ofc->nb_streams);
@@ -86,15 +94,20 @@ void node_init(node_t *n, char *filename)
 	printf("ofc.oformat.name=%s\n", ofc->oformat->name);
 	printf("ofc.pb=%p\n", ofc->pb);
 	ofc->streams[0]->codec->time_base.num = 10;
+	printf("ofc.st[0].avg_frame_rate={%d,%d}\n", 
+			ofc->streams[0]->avg_frame_rate.num,
+			ofc->streams[0]->avg_frame_rate.den
+			);
 	printf("ofc.st[0].codec.timebase={%d,%d}\n", 
 			ofc->streams[0]->codec->time_base.num,
 			ofc->streams[0]->codec->time_base.den
 			);
+	printf("ofc.priv=%p\n", ofc->priv_data);
 
-	avformat_write_header(ofc, NULL);
-
-	n->ifc = ifc;
-	n->ofc = ofc;
+	//err = ofc->oformat->write_header(ofc);
+	err = avformat_write_header(ofc, NULL);
+	printf("write_header=%d\n", err);
+	avio_flush(ofc->pb);
 }
 
 void node_read_packet(node_t *n)
@@ -110,12 +123,6 @@ void node_read_packet(node_t *n)
 		av_write_frame(n->ofc, &pkt);
 	}
 }
-
-static AVFormatContext *ifc;
-static AVStream *st_h264;
-static char opt_preview;
-static char *input_filename, *output_filename;
-static float preview_pos = 0.4;
 
 static void init() {
 	int i;
@@ -263,6 +270,81 @@ static void help() {
 	exit(0);
 }
 
+static void *decode_frame(AVFrame *frm, AVStream *st, int reach_keyfrm) {
+	int n;
+	for (n = 0; n < 2000; n++) {
+		AVPacket pkt;
+		int i = av_read_frame(ifc, &pkt);
+		if (pkt.stream_index != st->index)
+			continue;
+		int got_pic; 
+		i = avcodec_decode_video2(st->codec, frm, &got_pic, &pkt);
+		printf("decode %d, w=%d h=%d pts=%lld\n", i, frm->width, frm->height, pkt.pts);
+		if (got_pic) {
+			if (!reach_keyfrm || frm->key_frame)
+				return frm;
+		}
+	}
+	return NULL;
+}
+
+static void encode() 
+{
+	AVStream *st = st_h264;
+	AVFrame *frm = avcodec_alloc_frame();
+	int i, r, n;
+
+	decode_frame(frm, st, 1);
+	printf("gotit, startencode\n");
+
+	x264_param_t param;
+
+	av_seek_frame(ifc, st->index, 1000*200, 0);
+
+	x264_param_default_preset(&param, "ultrafast", "");
+	param.i_log_level = X264_LOG_DEBUG;
+	param.i_width = frm->width;
+	param.i_height = frm->height;
+	param.i_csp = X264_CSP_I420;
+	x264_t *h = x264_encoder_open(&param);
+	printf("264 %p\n", h);
+
+	FILE *fp = fopen("1.264", "wb+");
+	for (n = 0; n < 400; n++) {
+		decode_frame(frm, st, 0);
+		printf("pts=%lld", frm->pkt_pts);
+
+		x264_picture_t picin, picout;
+		memset(&picin, 0, sizeof(picin));
+		picin.img.i_stride[0] = frm->linesize[0];
+		picin.img.i_stride[1] = frm->linesize[1];
+		picin.img.i_stride[2] = frm->linesize[2];
+		picin.img.plane[0] = frm->data[0];
+		picin.img.plane[1] = frm->data[1];
+		picin.img.plane[2] = frm->data[2];
+		picin.img.i_csp = X264_CSP_I420;
+		picin.i_pts = frm->pkt_pts;
+
+		x264_nal_t *nal;
+		int i_nal;
+		r = x264_encoder_encode(h, &nal, &i_nal, &picin, &picout);
+		printf("##%d encode=%d\n", n, r);
+		if (r) {
+			printf("write frame\n");
+			AVPacket pkt;
+			pkt.stream_index = 0;
+			pkt.pts = frm->pkt_pts;
+			pkt.dts = pkt.pts;
+			pkt.data = nal[0].p_payload;
+			pkt.size = r;
+			av_write_frame(ofc, &pkt);
+			avio_flush(ofc->pb);
+			fwrite(nal[0].p_payload, r, 1, fp);
+		}
+	}
+	fclose(fp);
+}
+
 int main(int argc, char *argv[])
 {
 	av_log_set_level(AV_LOG_DEBUG);
@@ -271,13 +353,21 @@ int main(int argc, char *argv[])
 	int i;
 	char *filename = NULL;
 
+	output_filename = "a.flv";
+	output_init();
+	input_filename = "/root/1.mp4";
+	init();
+	encode();
+	return 0;
+
 	if (!strcmp(argv[1], "-p")) {
 		opt_preview = 1;
 		input_filename = argv[2];
 		output_filename = argv[3];
 		printf("preview %s %s\n", input_filename, output_filename);
 		init();
-		pick_i_frames();
+		encode();
+		//pick_i_frames();
 	} else 
 		help();
 

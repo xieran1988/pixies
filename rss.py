@@ -48,9 +48,6 @@ def LS():
 	for i in glob.glob('pool/*.m'):
 		sha = re.findall(r'/(\w+).m', i)[0]
 		m = L(sha)
-		m['img'] = i[:-2] + '.jpg'
-		if not os.path.exists(m['img']):
-			del m['img']
 		if os.path.exists(i[:-2] + '.len'):
 			totlen = int(open(i[:-2] + '.len').read())
 			curlen = os.path.getsize(m['fname'])
@@ -69,7 +66,7 @@ def fetch_video_start(sha, rssurl, fname, title):
 	if os.path.exists(fname):
 		print 'exists, skip'
 		return False
-	S(sha, {'title':title, 'rss':shortsha(rssurl), 'fname':fname, 'stat':'start'})
+	S(sha, {'title':title, 'rss':shortsha(rssurl), 'fname':fname, 'stat':'start', 'prefix':'pool/%s'%sha})
 	return True
 
 def fetch_video_end(sha):
@@ -234,9 +231,10 @@ if __name__ == '__main__':
 	url = sys.argv[1]
 
 	if url == 'genallpreview':
-		r = LS()
+		r = LS()[0]
 		for k in r:
 			v = r[k]
+			print v
 			os.system('av/avin -p %s %s' % (v['fname'], v['img']))
 
 	if url == 'vimeo':

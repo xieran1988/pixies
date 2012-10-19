@@ -14,6 +14,7 @@
 #
 # 10.11:
 # 		DONE: get preview images for each rss channel
+# 		DONE: download progress: vimeo
 #
 # 		TODO: Live youtube/youku/vimeo/tudou channel
 # 			DONE: youtube
